@@ -1,5 +1,3 @@
-import argparse
-import cleaner
 import contextlib
 import os
 import tempfile
@@ -7,6 +5,8 @@ import zipfile
 from functools import partial
 from pathlib import Path
 from typing import Generator
+
+import cleaner
 
 
 def walk(path: Path) -> Generator[Path, None, None]:
@@ -47,31 +47,8 @@ def explode_epub(path: Path, output_path: Path|None=None):
                 zip_ref.write(full_path, rel_path, compress_type=zip_info.compress_type)
 
 
-def valid_epub_file(path_str) -> Path:
-    path = Path(path_str).resolve()
-
-    if not path.exists():
-        raise argparse.ArgumentTypeError(f"Invalid path: {path_str}")
-
-    return valid_is_epub(path)
-
-
-def valid_is_epub(path_str: str|Path) -> Path:
-    path = Path(path_str).resolve()
-
-    if path.suffix.lower() != ".epub":
-        raise argparse.ArgumentTypeError(f"File must have an 'epub' extension. '{path_str}'")
-
-    return path
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("path", type=valid_epub_file, help="path to an epub")
-    parser.add_argument("-o", "--output", type=valid_is_epub, default=None, help="output file name")
-    args = parser.parse_args()
-
-    with explode_epub(args.path, args.output) as epub_dir:
+def edit_epub(path: Path, output_path: Path|None=None):
+    with explode_epub(path, output_path) as epub_dir:
         all_text = ""
         html_files = [f for f in walk(epub_dir) if "html" in f.suffix]
         for file_path in html_files:
@@ -98,4 +75,30 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    def _valid_epub_file(path_str) -> Path:
+        path = Path(path_str).resolve()
+
+        if not path.exists():
+            raise argparse.ArgumentTypeError(f"Invalid path: {path_str}")
+
+        return _valid_is_epub(path)
+
+
+    def _valid_is_epub(path_str: str|Path) -> Path:
+        path = Path(path_str).resolve()
+
+        if path.suffix.lower() != ".epub":
+            raise argparse.ArgumentTypeError(f"File must have an 'epub' extension. '{path_str}'")
+
+        return path
+
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path", type=_valid_epub_file, help="path to an epub")
+    parser.add_argument("-o", "--output", type=_valid_is_epub, default=None, help="output file name")
+    args = parser.parse_args()
+
+    edit_epub(args.path, args.output)
+
