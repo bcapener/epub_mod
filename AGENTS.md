@@ -21,5 +21,6 @@ Defaults to `<stem>_edit.epub` alongside the input file.
 ## Conventions
 
 - Managed with **uv** (`pyproject.toml` + `uv.lock`). Python 3.12+.
-- No tests, no linter, no typecheck, no CI.
+- Tests use **pytest** (`uv run pytest`, config in `pyproject.toml`). Fixtures: EPUBs in `tests/data/` via Git LFS.
+- No linter, no typecheck, no CI.
 - `cleaner.py` is adapted from an external source. Regex rules are intentionally quirky (e.g. the `zxsa` intermediate for f-words). Edit carefully.

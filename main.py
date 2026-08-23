@@ -58,19 +58,29 @@ def explode_epub(path: Path, output_path: Path|None=None):
         rel_path_to_full_path = {}
         for file_path in walk(temp_dir):
             rel_path = str(file_path.relative_to(temp_dir))
-            assert rel_path in rel_path_to_zip_info
-            rel_path_to_full_path[rel_path] = file_path
+            if rel_path in rel_path_to_zip_info:
+                rel_path_to_full_path[rel_path] = file_path
 
         # verify no files were added or removed.
-        orig_files = sorted(rel_path_to_zip_info.keys())
+        orig_files = sorted(n for n in rel_path_to_zip_info if not n.endswith('/'))
         curr_files = sorted(rel_path_to_full_path.keys())
         if orig_files != curr_files:
             raise RuntimeError("No files can be added or deleted from the epub.")
 
         with zipfile.ZipFile(new_path, 'w') as zip_ref:
             for rel_path, zip_info in rel_path_to_zip_info.items():
+                if rel_path.endswith('/'):
+                    zip_ref.writestr(zip_info, b'')
+                    continue
                 full_path = rel_path_to_full_path[rel_path]
-                zip_ref.write(full_path, rel_path, compress_type=zip_info.compress_type)
+                new_info = zipfile.ZipInfo(rel_path, date_time=zip_info.date_time)
+                new_info.compress_type = zip_info.compress_type
+                new_info.external_attr = zip_info.external_attr
+                new_info.internal_attr = zip_info.internal_attr
+                new_info.create_system = zip_info.create_system
+                new_info.comment = zip_info.comment
+                compress_level = getattr(zip_info, "compress_level", getattr(zip_info, "_compresslevel", None))
+                zip_ref.writestr(new_info, full_path.read_bytes(), compresslevel=compress_level)
 
 
 def make_epub(path: Path, output_path: Path|None=None):
@@ -88,8 +98,8 @@ def make_epub(path: Path, output_path: Path|None=None):
         rel_path = str(file_path.relative_to(path))
         if rel_path == "MANIFEST.json":
             continue
-        assert rel_path in rel_path_to_manifest_entry
-        rel_path_to_full_path[rel_path] = file_path
+        if rel_path in rel_path_to_manifest_entry:
+            rel_path_to_full_path[rel_path] = file_path
 
     # verify no files were added or removed.
     orig_files = sorted(n for n in rel_path_to_manifest_entry if not n.endswith('/'))

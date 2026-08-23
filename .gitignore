@@ -12,3 +12,4 @@ wheels/
 .vscode
 *.epub
 !tests/data/*.epub
+.pytest_cache/
