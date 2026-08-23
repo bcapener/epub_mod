@@ -11,3 +11,4 @@ wheels/
 
 .vscode
 *.epub
+!tests/data/*.epub
