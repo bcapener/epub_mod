@@ -1,3 +1,4 @@
+import base64
 import contextlib
 import json
 import os
@@ -35,6 +36,11 @@ def extract_epub(path: Path, output_dir: Path|None=None):
                 "compress_type": info.compress_type,
                 "CRC": info.CRC,
                 "compress_level": getattr(info, "compress_level", getattr(info, "_compresslevel", None)),
+                "date_time": list(info.date_time),
+                "external_attr": info.external_attr,
+                "internal_attr": info.internal_attr,
+                "create_system": info.create_system,
+                "comment": base64.b64encode(info.comment).decode("ascii") if info.comment else None,
             })
 
         (out / "MANIFEST.json").write_text(json.dumps(manifest, indent=2))
@@ -49,38 +55,28 @@ def explode_epub(path: Path, output_path: Path|None=None):
     new_path = output_path or path.parent / f"{path.stem}_edit{path.suffix}"
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        with zipfile.ZipFile(path, 'r') as zip_ref:
-            rel_path_to_zip_info = zip_ref.NameToInfo
-            zip_ref.extractall(temp_dir)
+        epub_dir = extract_epub(path, Path(temp_dir))
+        yield epub_dir
+        make_epub(epub_dir, new_path)
 
-        yield temp_dir
 
-        rel_path_to_full_path = {}
-        for file_path in walk(temp_dir):
-            rel_path = str(file_path.relative_to(temp_dir))
-            if rel_path in rel_path_to_zip_info:
-                rel_path_to_full_path[rel_path] = file_path
-
-        # verify no files were added or removed.
-        orig_files = sorted(n for n in rel_path_to_zip_info if not n.endswith('/'))
-        curr_files = sorted(rel_path_to_full_path.keys())
-        if orig_files != curr_files:
-            raise RuntimeError("No files can be added or deleted from the epub.")
-
-        with zipfile.ZipFile(new_path, 'w') as zip_ref:
-            for rel_path, zip_info in rel_path_to_zip_info.items():
-                if rel_path.endswith('/'):
-                    zip_ref.writestr(zip_info, b'')
-                    continue
-                full_path = rel_path_to_full_path[rel_path]
-                new_info = zipfile.ZipInfo(rel_path, date_time=zip_info.date_time)
-                new_info.compress_type = zip_info.compress_type
-                new_info.external_attr = zip_info.external_attr
-                new_info.internal_attr = zip_info.internal_attr
-                new_info.create_system = zip_info.create_system
-                new_info.comment = zip_info.comment
-                compress_level = getattr(zip_info, "compress_level", getattr(zip_info, "_compresslevel", None))
-                zip_ref.writestr(new_info, full_path.read_bytes(), compresslevel=compress_level)
+def _zip_info_from_entry(entry: dict) -> zipfile.ZipInfo:
+    name = entry["name"]
+    if "date_time" in entry:
+        info = zipfile.ZipInfo(name, date_time=tuple(entry["date_time"]))
+    else:
+        info = zipfile.ZipInfo(name)
+    if "external_attr" in entry:
+        info.external_attr = entry["external_attr"]
+    if "internal_attr" in entry:
+        info.internal_attr = entry["internal_attr"]
+    if "create_system" in entry:
+        info.create_system = entry["create_system"]
+    comment_b64 = entry.get("comment")
+    if comment_b64:
+        info.comment = base64.b64decode(comment_b64)
+    info.compress_type = entry["compress_type"]
+    return info
 
 
 def make_epub(path: Path, output_path: Path|None=None):
@@ -109,14 +105,13 @@ def make_epub(path: Path, output_path: Path|None=None):
 
     with zipfile.ZipFile(new_path, 'w') as zip_ref:
         for entry in manifest:
-            rel_path = entry["name"]
-            if rel_path.endswith('/'):
-                zip_ref.writestr(zipfile.ZipInfo(rel_path), b'')
+            info = _zip_info_from_entry(entry)
+            if entry["name"].endswith('/'):
+                zip_ref.writestr(info, b'')
                 continue
-            full_path = rel_path_to_full_path[rel_path]
-            zip_ref.write(full_path, rel_path,
-                          compress_type=entry["compress_type"],
-                          compresslevel=entry.get("compress_level"))
+            full_path = rel_path_to_full_path[entry["name"]]
+            zip_ref.writestr(info, full_path.read_bytes(),
+                             compresslevel=entry.get("compress_level"))
 
     return new_path
 
