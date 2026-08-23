@@ -1,4 +1,5 @@
 import contextlib
+import json
 import os
 import tempfile
 import zipfile
@@ -14,6 +15,31 @@ def walk(path: Path) -> Generator[Path, None, None]:
         root = Path(root)
         for file in files:
             yield root / file
+
+
+def extract_epub(path: Path, output_dir: Path|None=None):
+    assert path.exists()
+    assert path.suffix.lower() == ".epub"
+
+    out = output_dir or path.parent / path.stem
+    out.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(path, 'r') as zip_ref:
+        rel_path_to_zip_info = zip_ref.NameToInfo
+        zip_ref.extractall(out)
+
+        manifest = []
+        for name, info in rel_path_to_zip_info.items():
+            manifest.append({
+                "name": name,
+                "compress_type": info.compress_type,
+                "CRC": info.CRC,
+                "compress_level": getattr(info, "compress_level", getattr(info, "_compresslevel", None)),
+            })
+
+        (out / "MANIFEST.json").write_text(json.dumps(manifest, indent=2))
+
+    return out
 
 
 @contextlib.contextmanager
@@ -45,6 +71,44 @@ def explode_epub(path: Path, output_path: Path|None=None):
             for rel_path, zip_info in rel_path_to_zip_info.items():
                 full_path = rel_path_to_full_path[rel_path]
                 zip_ref.write(full_path, rel_path, compress_type=zip_info.compress_type)
+
+
+def make_epub(path: Path, output_path: Path|None=None):
+    assert path.is_dir()
+    manifest_path = path / "MANIFEST.json"
+    if not manifest_path.exists():
+        raise RuntimeError(f"No MANIFEST.json found in '{path}'.")
+    new_path = output_path or path.with_suffix(".epub")
+
+    manifest = json.loads(manifest_path.read_text())
+    rel_path_to_manifest_entry = {entry["name"]: entry for entry in manifest}
+
+    rel_path_to_full_path = {}
+    for file_path in walk(path):
+        rel_path = str(file_path.relative_to(path))
+        if rel_path == "MANIFEST.json":
+            continue
+        assert rel_path in rel_path_to_manifest_entry
+        rel_path_to_full_path[rel_path] = file_path
+
+    # verify no files were added or removed.
+    orig_files = sorted(n for n in rel_path_to_manifest_entry if not n.endswith('/'))
+    curr_files = sorted(rel_path_to_full_path.keys())
+    if orig_files != curr_files:
+        raise RuntimeError("No files can be added or deleted from the epub.")
+
+    with zipfile.ZipFile(new_path, 'w') as zip_ref:
+        for entry in manifest:
+            rel_path = entry["name"]
+            if rel_path.endswith('/'):
+                zip_ref.writestr(zipfile.ZipInfo(rel_path), b'')
+                continue
+            full_path = rel_path_to_full_path[rel_path]
+            zip_ref.write(full_path, rel_path,
+                          compress_type=entry["compress_type"],
+                          compresslevel=entry.get("compress_level"))
+
+    return new_path
 
 
 def edit_epub(path: Path, output_path: Path|None=None):
