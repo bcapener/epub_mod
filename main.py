@@ -170,10 +170,36 @@ if __name__ == "__main__":
         return path
 
 
+    def _valid_dir(path_str) -> Path:
+        path = Path(path_str).resolve()
+
+        if not path.is_dir():
+            raise argparse.ArgumentTypeError(f"Invalid directory: {path_str}")
+
+        return path
+
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("path", type=_valid_epub_file, help="path to an epub")
-    parser.add_argument("-o", "--output", type=_valid_is_epub, default=None, help="output file name")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    edit_parser = subparsers.add_parser("edit", help="clean profanity from an epub")
+    edit_parser.add_argument("path", type=_valid_epub_file, help="path to an epub")
+    edit_parser.add_argument("-o", "--output", type=_valid_is_epub, default=None, help="output file name")
+
+    extract_parser = subparsers.add_parser("extract", help="extract an epub into a directory")
+    extract_parser.add_argument("path", type=_valid_epub_file, help="path to an epub")
+    extract_parser.add_argument("-o", "--output", type=Path, default=None, help="output directory")
+
+    make_parser = subparsers.add_parser("make", help="build an epub from an extracted directory")
+    make_parser.add_argument("path", type=_valid_dir, help="path to an extracted epub directory")
+    make_parser.add_argument("-o", "--output", type=_valid_is_epub, default=None, help="output file name")
+
     args = parser.parse_args()
 
-    edit_epub(args.path, args.output)
+    if args.command == "edit":
+        edit_epub(args.path, args.output)
+    elif args.command == "extract":
+        print(f"Extracted to '{extract_epub(args.path, args.output)}'")
+    elif args.command == "make":
+        print(f"Created '{make_epub(args.path, args.output)}'")
 
