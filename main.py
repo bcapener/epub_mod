@@ -11,6 +11,10 @@ from typing import Generator
 import cleaner
 
 
+def _normalize_name(name: str) -> str:
+    return name.replace("\\", "/")
+
+
 def walk(path: Path) -> Generator[Path, None, None]:
     for root, _dirs, files in os.walk(path):
         root = Path(root)
@@ -32,7 +36,7 @@ def extract_epub(path: Path, output_dir: Path|None=None):
         manifest = []
         for name, info in rel_path_to_zip_info.items():
             manifest.append({
-                "name": name,
+                "name": _normalize_name(name),
                 "compress_type": info.compress_type,
                 "CRC": info.CRC,
                 "compress_level": getattr(info, "compress_level", getattr(info, "_compresslevel", None)),
@@ -87,11 +91,13 @@ def make_epub(path: Path, output_path: Path|None=None):
     new_path = output_path or path.with_suffix(".epub")
 
     manifest = json.loads(manifest_path.read_text())
+    for entry in manifest:
+        entry["name"] = _normalize_name(entry["name"])
     rel_path_to_manifest_entry = {entry["name"]: entry for entry in manifest}
 
     rel_path_to_full_path = {}
     for file_path in walk(path):
-        rel_path = str(file_path.relative_to(path))
+        rel_path = file_path.relative_to(path).as_posix()
         if rel_path == "MANIFEST.json":
             continue
         if rel_path in rel_path_to_manifest_entry:

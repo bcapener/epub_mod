@@ -57,12 +57,32 @@ def test_make_epub_supports_legacy_manifest(tmp_path: Path):
     epub_dir = tmp_path / "book"
     (epub_dir / "META-INF").mkdir(parents=True)
     (epub_dir / "mimetype").write_bytes(b"application/epub+zip")
-    (epub_dir / "META-INF/container.xml").write_text("<container/>")
+    (epub_dir / "META-INF" / "container.xml").write_text("<container/>")
     (epub_dir / "chapter.xhtml").write_text("<p>hi</p>")
     (epub_dir / "MANIFEST.json").write_text(json.dumps([
         {"name": "mimetype", "compress_type": 0, "CRC": 0, "compress_level": None},
         {"name": "META-INF/", "compress_type": 0, "CRC": 0, "compress_level": None},
         {"name": "META-INF/container.xml", "compress_type": 8, "CRC": 0, "compress_level": 9},
+        {"name": "chapter.xhtml", "compress_type": 8, "CRC": 0, "compress_level": None},
+    ]))
+
+    out = make_epub(epub_dir, tmp_path / "book.epub")
+
+    with zipfile.ZipFile(out) as z:
+        assert z.testzip() is None
+        assert z.namelist() == ["mimetype", "META-INF/", "META-INF/container.xml", "chapter.xhtml"]
+
+
+def test_make_epub_normalizes_windows_separators(tmp_path: Path):
+    epub_dir = tmp_path / "book"
+    (epub_dir / "META-INF").mkdir(parents=True)
+    (epub_dir / "mimetype").write_bytes(b"application/epub+zip")
+    (epub_dir / "META-INF/container.xml").write_text("<container/>")
+    (epub_dir / "chapter.xhtml").write_text("<p>hi</p>")
+    (epub_dir / "MANIFEST.json").write_text(json.dumps([
+        {"name": "mimetype", "compress_type": 0, "CRC": 0, "compress_level": None},
+        {"name": "META-INF\\", "compress_type": 0, "CRC": 0, "compress_level": None},
+        {"name": "META-INF\\container.xml", "compress_type": 8, "CRC": 0, "compress_level": 9},
         {"name": "chapter.xhtml", "compress_type": 8, "CRC": 0, "compress_level": None},
     ]))
 
