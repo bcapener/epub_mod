@@ -22,7 +22,8 @@ def walk(path: Path) -> Generator[Path, None, None]:
             yield root / file
 
 
-def extract_epub(path: Path, output_dir: Path|None=None):
+def extract_epub(path: Path, output_dir: Path|None=None) -> Path:
+    """Extract an epub into a directory, returning that directory."""
     assert path.exists()
     assert path.suffix.lower() == ".epub"
 
@@ -53,7 +54,8 @@ def extract_epub(path: Path, output_dir: Path|None=None):
 
 
 @contextlib.contextmanager
-def explode_epub(path: Path, output_path: Path|None=None):
+def explode_epub(path: Path, output_path: Path|None=None) -> Generator[Path, None, None]:
+    """Extract an epub, yield its directory, then repackage it as an epub."""
     assert path.exists()
     assert path.suffix.lower() == ".epub"
     new_path = output_path or path.parent / f"{path.stem}_edit{path.suffix}"
@@ -83,7 +85,8 @@ def _zip_info_from_entry(entry: dict) -> zipfile.ZipInfo:
     return info
 
 
-def make_epub(path: Path, output_path: Path|None=None):
+def make_epub(path: Path, output_path: Path|None=None) -> Path:
+    """Build an epub from an extracted directory, returning the output path."""
     assert path.is_dir()
     manifest_path = path / "MANIFEST.json"
     if not manifest_path.exists():
