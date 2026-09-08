@@ -12,7 +12,7 @@ wheels = [
 ]
 
 [[package]]
-name = "epub-parser"
+name = "epub-mod"
 version = "0.1.0"
 source = { virtual = "." }
 
