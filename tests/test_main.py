@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from main import explode_epub, extract_epub, make_epub
+from epub_mod import explode_epub, extract_epub, make_epub
 
 DATA_DIR = Path(__file__).parent / "data"
 

@@ -7,16 +7,17 @@ Python CLI that cleans profanity from EPUB files. Derived from [calibre-plugin-l
 ## Run
 
 ```sh
-uv run main.py <path-to-epub>
-uv run main.py <path-to-epub> -o <output.epub>
+uv run src/main.py <path-to-epub>
+uv run src/main.py <path-to-epub> -o <output.epub>
 ```
 
 Defaults to `<stem>_edit.epub` alongside the input file.
 
 ## Structure
 
-- `main.py` — CLI entrypoint. Extracts EPUB (ZIP), applies replacements to all HTML files, re-packages.
-- `cleaner.py` — Regex-based replacement engine. `language_check()` returns the rule list; rules are context-adaptive based on book content.
+- `src/main.py` — CLI entrypoint.
+- `src/epub_mod.py` — Core EPUB handling. Extracts EPUB (ZIP), applies replacements to all HTML files, re-packages.
+- `src/cleaner.py` — Regex-based replacement engine. `language_check()` returns the rule list; rules are context-adaptive based on book content.
 
 ## Conventions
 
