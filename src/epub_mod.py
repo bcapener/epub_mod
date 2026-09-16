@@ -138,21 +138,29 @@ def edit_epub_dir(epub_dir: Path):
 
     replacement_list = cleaner.language_check(all_text)
     for file_path in html_files:
-        text = file_path.read_text()
+        with open(file_path, "r", newline="") as file:
+            text = file.read()
         output = ""
-        for line in text.splitlines():
+        for line in text.splitlines(keepends=True):
+            if line.endswith("\r\n"):
+                line, line_end = line[:-2], "\r\n"
+            elif line.endswith("\n") or line.endswith("\r"):
+                line, line_end = line[:-1], line[-1]
+            else:
+                line_end = ""
             # Go through all elements of replacement_list
             for search, sub, pcase in replacement_list:
                 if pcase:  # Preserve case
                     line = search.sub(partial(pcase, sub), line)
                 else:  # Don't preserve case
                     line = search.sub(sub, line)
-            output += line + "\n"
-        if text.replace('\n', "") == output.replace('\n', ''):
-            print(f"Cleaned:   '{file_path}'")
-        else:
+            output += line + line_end
+        if output == text:
             print(f"Unchanged: '{file_path}'")
-        file_path.write_text(output)
+            continue
+        print(f"Cleaned:   '{file_path}'")
+        with open(file_path, "w", newline="") as file:
+            file.write(output)
 
 
 def edit_epub(path: Path, output_path: Path|None=None):
