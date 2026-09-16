@@ -34,9 +34,12 @@ def extract_epub(path: Path, output_dir: Path|None=None) -> Path:
         rel_path_to_zip_info = zip_ref.NameToInfo
         zip_ref.extractall(out)
 
-        manifest = []
+        manifest = {
+            "header": {"version": "1.0"},
+            "entries": [],
+        }
         for name, info in rel_path_to_zip_info.items():
-            manifest.append({
+            manifest["entries"].append({
                 "name": _normalize_name(name),
                 "compress_type": info.compress_type,
                 "CRC": info.CRC,
@@ -94,9 +97,10 @@ def make_epub(path: Path, output_path: Path|None=None) -> Path:
     new_path = output_path or path.with_suffix(".epub")
 
     manifest = json.loads(manifest_path.read_text())
-    for entry in manifest:
+    entries = manifest["entries"] if isinstance(manifest, dict) else manifest
+    for entry in entries:
         entry["name"] = _normalize_name(entry["name"])
-    rel_path_to_manifest_entry = {entry["name"]: entry for entry in manifest}
+    rel_path_to_manifest_entry = {entry["name"]: entry for entry in entries}
 
     rel_path_to_full_path = {}
     for file_path in walk(path):
@@ -113,7 +117,7 @@ def make_epub(path: Path, output_path: Path|None=None) -> Path:
         raise RuntimeError("No files can be added or deleted from the epub.")
 
     with zipfile.ZipFile(new_path, 'w') as zip_ref:
-        for entry in manifest:
+        for entry in entries:
             info = _zip_info_from_entry(entry)
             if entry["name"].endswith('/'):
                 zip_ref.writestr(info, b'')
