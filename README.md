@@ -1,6 +1,57 @@
 
 https://github.com/jdanders/calibre-plugin-language-cleaner/tree/master
 
+## Running the CLI
+
+Project is managed with [uv](https://docs.astral.sh/uv). No install needed to
+run from a checkout:
+
+```sh
+uv run src/main.py edit <path-to-epub>
+```
+
+Defaults to `<stem>_edit.epub` alongside the input file. Use `-o` for a custom
+output:
+
+```sh
+uv run src/main.py edit <path-to-epub> -o <output.epub>
+```
+
+Other subcommands:
+
+```sh
+uv run src/main.py extract <path-to-epub> -o <dir>   # unzip an epub to a directory
+uv run src/main.py make <dir> -o <output.epub>        # build an epub from a directory
+```
+
+## Installing with uv
+
+Install the CLI as a user tool with an editable install, so changes to the
+checkout take effect immediately:
+
+```sh
+uv tool install --editable .
+```
+
+The `epub-mod` command is then available anywhere:
+
+```sh
+epub-mod edit <path-to-epub>
+```
+
+To update after pulling changes (the editable install reflects the checkout, so
+this is only needed when dependencies or entry points change):
+
+```sh
+uv tool install --editable .
+```
+
+To remove it:
+
+```sh
+uv tool uninstall epub-mod
+```
+
 ## Adding more EPUB files
 
 Test fixtures live in `tests/data/` and are stored with [Git LFS](https://git-lfs.com).

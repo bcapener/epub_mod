@@ -6,6 +6,19 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+epub-mod = "main:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools]
+py-modules = ["epub_mod", "cleaner", "main"]
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
