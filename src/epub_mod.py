@@ -2,11 +2,15 @@ import base64
 import contextlib
 import json
 import os
+import sys
 import tempfile
 import zipfile
 from functools import partial
 from pathlib import Path
 from typing import Generator
+
+LANGUAGE_CLEANER_DIR = Path(__file__).resolve().parents[1] / "third_party" / "calibre-plugin-language-cleaner"
+sys.path.insert(0, str(LANGUAGE_CLEANER_DIR))
 
 import cleaner
 

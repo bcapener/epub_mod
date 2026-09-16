@@ -17,11 +17,11 @@ Defaults to `<stem>_edit.epub` alongside the input file.
 
 - `src/main.py` — CLI entrypoint.
 - `src/epub_mod.py` — Core EPUB handling. Extracts EPUB (ZIP), applies replacements to all HTML files, re-packages.
-- `src/cleaner.py` — Regex-based replacement engine. `language_check()` returns the rule list; rules are context-adaptive based on book content.
+- `third_party/calibre-plugin-language-cleaner/cleaner.py` — Regex-based replacement engine (git submodule). `language_check()` returns the rule list; rules are context-adaptive based on book content.
 
 ## Conventions
 
 - Managed with **uv** (`pyproject.toml` + `uv.lock`). Python 3.12+.
 - Tests use **pytest** (`uv run pytest`, config in `pyproject.toml`). Fixtures: EPUBs in `tests/data/` via Git LFS.
 - No linter, no typecheck, no CI.
-- `cleaner.py` is adapted from an external source. Regex rules are intentionally quirky (e.g. the `zxsa` intermediate for f-words). Edit carefully.
+- `cleaner.py` lives in the `third_party/calibre-plugin-language-cleaner` git submodule. Regex rules are intentionally quirky (e.g. the `zxsa` intermediate for f-words). Edit carefully.

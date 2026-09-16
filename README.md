@@ -1,6 +1,35 @@
 
 https://github.com/jdanders/calibre-plugin-language-cleaner/tree/master
 
+## Getting the source
+
+The regex replacement engine lives in a git submodule at
+`third_party/calibre-plugin-language-cleaner`. Initializing a submodule-only clone
+(`git clone --recurse-submodules`) does this automatically:
+
+```sh
+git clone --recurse-submodules <repo-url>
+```
+
+If you already cloned without that flag, initialize the submodule after the fact:
+
+```sh
+git submodule update --init --recursive
+```
+
+Without the submodule, `epub-mod edit` fails at import (`import cleaner`).
+
+The submodule is pinned to a commit. To pull in newer replacement rules when the
+upstream repo updates:
+
+```sh
+git submodule update --remote third_party/calibre-plugin-language-cleaner
+git commit -am "Bump calibre-plugin-language-cleaner submodule"
+```
+
+(Or `git -C third_party/calibre-plugin-language-cleaner pull`, then commit the
+changed submodule pointer.) Run `git submodule status` to see the pinned commit.
+
 ## Running the CLI
 
 Project is managed with [uv](https://docs.astral.sh/uv). No install needed to
