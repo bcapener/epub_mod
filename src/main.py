@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from epub_mod import edit_epub, extract_epub, make_epub
+from epub_mod import edit_epub, edit_epub_dir, extract_epub, make_epub
 
 
 def _valid_epub_file(path_str) -> Path:
@@ -31,6 +31,15 @@ def _valid_dir(path_str) -> Path:
     return path
 
 
+def _valid_epub_dir(path_str) -> Path:
+    path = _valid_dir(path_str)
+
+    if not (path / "MANIFEST.json").exists():
+        raise argparse.ArgumentTypeError(f"No MANIFEST.json found in directory: {path_str}")
+
+    return path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -38,6 +47,9 @@ def main() -> None:
     edit_parser = subparsers.add_parser("edit", help="clean profanity from an epub")
     edit_parser.add_argument("path", type=_valid_epub_file, help="path to an epub")
     edit_parser.add_argument("-o", "--output", type=_valid_is_epub, default=None, help="output file name")
+
+    edit_dir_parser = subparsers.add_parser("edit-dir", help="clean profanity from an extracted epub directory")
+    edit_dir_parser.add_argument("path", type=_valid_epub_dir, help="path to an extracted epub directory")
 
     extract_parser = subparsers.add_parser("extract", help="extract an epub into a directory")
     extract_parser.add_argument("path", type=_valid_epub_file, help="path to an epub")
@@ -51,6 +63,8 @@ def main() -> None:
 
     if args.command == "edit":
         edit_epub(args.path, args.output)
+    elif args.command == "edit-dir":
+        edit_epub_dir(args.path)
     elif args.command == "extract":
         print(f"Extracted to '{extract_epub(args.path, args.output)}'")
     elif args.command == "make":

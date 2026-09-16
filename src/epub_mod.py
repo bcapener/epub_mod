@@ -125,28 +125,32 @@ def make_epub(path: Path, output_path: Path|None=None) -> Path:
     return new_path
 
 
+def edit_epub_dir(epub_dir: Path):
+    all_text = ""
+    html_files = [f for f in walk(epub_dir) if "html" in f.suffix]
+    for file_path in html_files:
+        content = file_path.read_text()
+        all_text += content
+
+    replacement_list = cleaner.language_check(all_text)
+    for file_path in html_files:
+        text = file_path.read_text()
+        output = ""
+        for line in text.splitlines():
+            # Go through all elements of replacement_list
+            for search, sub, pcase in replacement_list:
+                if pcase:  # Preserve case
+                    line = search.sub(partial(pcase, sub), line)
+                else:  # Don't preserve case
+                    line = search.sub(sub, line)
+            output += line + "\n"
+        if text.replace('\n', "") == output.replace('\n', ''):
+            print(f"Cleaned:   '{file_path}'")
+        else:
+            print(f"Unchanged: '{file_path}'")
+        file_path.write_text(output)
+
+
 def edit_epub(path: Path, output_path: Path|None=None):
     with explode_epub(path, output_path) as epub_dir:
-        all_text = ""
-        html_files = [f for f in walk(epub_dir) if "html" in f.suffix]
-        for file_path in html_files:
-            content = file_path.read_text()
-            all_text += content
-
-        replacement_list = cleaner.language_check(all_text)
-        for file_path in html_files:
-            text = file_path.read_text()
-            output = ""
-            for line in text.splitlines():
-                # Go through all elements of replacement_list
-                for search, sub, pcase in replacement_list:
-                    if pcase:  # Preserve case
-                        line = search.sub(partial(pcase, sub), line)
-                    else:  # Don't preserve case
-                        line = search.sub(sub, line)
-                output += line + "\n"
-            if text.replace('\n', "") == output.replace('\n', ''):
-                print(f"Cleaned:   '{file_path}'")
-            else:
-                print(f"Unchanged: '{file_path}'")
-            file_path.write_text(output)
+        edit_epub_dir(epub_dir)
