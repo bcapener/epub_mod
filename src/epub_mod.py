@@ -132,41 +132,68 @@ def make_epub(path: Path, output_path: Path|None=None) -> Path:
 
     return new_path
 
-
-def edit_epub_dir(epub_dir: Path):
-    all_text = ""
-    html_files = [f for f in walk(epub_dir) if "html" in f.suffix]
-    for file_path in html_files:
-        content = file_path.read_text()
-        all_text += content
-
-    replacement_list = cleaner.language_check(all_text)
-    for file_path in html_files:
-        with open(file_path, "r", newline="") as file:
-            text = file.read()
-        output = ""
-        for line in text.splitlines(keepends=True):
+def iter_lines(file_path: Path):
+    with open(file_path, "r", newline="") as file:
+        text = file.read()
+        for line_no, line in enumerate(text.splitlines(keepends=True), start=1):
             if line.endswith("\r\n"):
                 line, line_end = line[:-2], "\r\n"
             elif line.endswith("\n") or line.endswith("\r"):
                 line, line_end = line[:-1], line[-1]
             else:
                 line_end = ""
-            # Go through all elements of replacement_list
-            for search, sub, pcase in replacement_list:
-                if pcase:  # Preserve case
-                    line = search.sub(partial(pcase, sub), line)
-                else:  # Don't preserve case
-                    line = search.sub(sub, line)
-            output += line + line_end
-        if output == text:
-            print(f"Unchanged: '{file_path}'")
+            yield line_no, line, line_end
+
+class Cleaner:
+    def __init__(self, epub_dir: Path):
+        self.html_files = [f for f in walk(epub_dir) if "html" in f.suffix]
+
+        all_text = ""
+        for file_path in self.html_files:
+            all_text += file_path.read_text()
+        self.replacement_list = cleaner.language_check(all_text)
+
+    def clean_line(self, line: str):
+        curr_line = str(line)
+        modifiers = []
+        for search, sub, pcase in self.replacement_list:
+            if pcase:  # Preserve case
+                line = search.sub(partial(pcase, sub), line)
+            else:  # Don't preserve case
+                line = search.sub(sub, line)
+            if curr_line != line:
+                modifiers.append((search.pattern, sub))
+            curr_line = str(line)
+        return line, modifiers
+
+
+def edit_epub_dir(epub_dir: Path, debug: bool=False):
+    c = Cleaner(epub_dir)
+
+    for file_path in c.html_files:
+        modified = False
+        lines = []
+        for line_no, line, line_end in iter_lines(file_path):
+            original_line = str(line)
+            line, modifiers = c.clean_line(line)
+            modified = modified or bool(modifiers)
+            if debug and modifiers:
+                mstr = ",".join(f"{repr(pattern)} -- {repr(sub)}" for pattern, sub in modifiers)
+                print(f"  Replaced in '{file_path.name}' (line {line_no}): {mstr}")
+                print(f"    Original: '{original_line}'")
+                print(f"    New:      '{line}'")
+
+            lines.append((line_no, original_line, line, line_end, modifiers))
+
+        if not modified:
             continue
         print(f"Cleaned:   '{file_path}'")
+
+        output = "".join(line + line_end for _, _, line, line_end, _ in lines)
         with open(file_path, "w", newline="") as file:
             file.write(output)
 
 
 def edit_epub(path: Path, output_path: Path|None=None):
     with explode_epub(path, output_path) as epub_dir:
-        edit_epub_dir(epub_dir)
+        edit_epub_dir(epub_dir, debug=False)
