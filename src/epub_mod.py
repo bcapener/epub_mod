@@ -14,6 +14,8 @@ sys.path.insert(0, str(LANGUAGE_CLEANER_DIR))
 
 import cleaner
 
+from sexdetect import sentence_probability, split_sentences
+
 
 def _normalize_name(name: str) -> str:
     return name.replace("\\", "/")
@@ -144,6 +146,12 @@ def edit_epub_dir(epub_dir: Path):
     for file_path in html_files:
         with open(file_path, "r", newline="") as file:
             text = file.read()
+
+        for sentence in split_sentences(text):
+            prob = sentence_probability(sentence)
+            if prob > 0.8:
+                print(f"{prob:.3f}\t{sentence}")
+
         output = ""
         for line in text.splitlines(keepends=True):
             if line.endswith("\r\n"):
