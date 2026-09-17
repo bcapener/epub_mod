@@ -2,6 +2,7 @@ import base64
 import contextlib
 import json
 import os
+import re
 import sys
 import tempfile
 import zipfile
@@ -9,10 +10,57 @@ from functools import partial
 from pathlib import Path
 from typing import Generator
 
+from sexual_content import sexual_content_probability
+
 LANGUAGE_CLEANER_DIR = Path(__file__).resolve().parents[1] / "third_party" / "calibre-plugin-language-cleaner"
 sys.path.insert(0, str(LANGUAGE_CLEANER_DIR))
 
 import cleaner
+
+
+SEXUAL_CONTENT_THRESHOLD = 0.75
+
+_SENTENCE_TERMINATORS = re.compile(r"(?<=[.!?])\s+")
+
+_ABBREVIATIONS = {
+    "mr", "mrs", "ms", "mx", "dr", "prof", "rev", "sr", "jr", "st",
+    "lt", "capt", "sgt", "gen", "col", "cmdr", "etc", "vs", "al",
+    "i.e", "e.g", "a.m", "p.m",
+}
+
+
+def split_sentences(text: str) -> list[str]:
+    """Split text into sentences on sentence-ending punctuation."""
+    sentences = _SENTENCE_TERMINATORS.split(text)
+    result: list[str] = []
+    pending = ""
+    for sentence in sentences:
+        if pending:
+            sentence = pending + " " + sentence
+            pending = ""
+        if _ends_with_abbreviation(sentence):
+            pending = sentence
+        else:
+            result.append(sentence)
+    if pending:
+        result.append(pending)
+    return result
+
+
+def _ends_with_abbreviation(sentence: str) -> bool:
+    match = re.search(r"([A-Za-z][A-Za-z\'-]*\.)\s*$", sentence)
+    if not match:
+        return False
+    word = match.group(1)[:-1]
+    return word.lower() in _ABBREVIATIONS or len(word) == 1 and word.isupper()
+
+
+def print_sexual_sentences(text: str, threshold: float = SEXUAL_CONTENT_THRESHOLD) -> None:
+    """Print sentences whose sexual content probability is at or above ``threshold``."""
+    for sentence in split_sentences(text):
+        probability = sexual_content_probability(sentence)
+        if probability >= threshold:
+            print(f"{probability:.3f} {sentence}")
 
 
 def _normalize_name(name: str) -> str:
@@ -144,6 +192,9 @@ def edit_epub_dir(epub_dir: Path):
     for file_path in html_files:
         with open(file_path, "r", newline="") as file:
             text = file.read()
+
+        print_sexual_sentences(text)
+
         output = ""
         for line in text.splitlines(keepends=True):
             if line.endswith("\r\n"):

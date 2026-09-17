@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "transformers[torch]>=5.17.0",
+]
 
 [project.scripts]
 epub-mod = "main:main"
@@ -17,7 +19,7 @@ build-backend = "setuptools.build_meta"
 "" = "src"
 
 [tool.setuptools]
-py-modules = ["epub_mod", "main"]
+py-modules = ["epub_mod", "main", "sexual_content"]
 
 [dependency-groups]
 dev = [
