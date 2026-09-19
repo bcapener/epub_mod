@@ -194,6 +194,6 @@ def edit_epub_dir(epub_dir: Path, debug: bool=False):
             file.write(output)
 
 
-def edit_epub(path: Path, output_path: Path|None=None):
+def edit_epub(path: Path, output_path: Path|None=None, debug: bool=False):
     with explode_epub(path, output_path) as epub_dir:
-        edit_epub_dir(epub_dir, debug=False)
+        edit_epub_dir(epub_dir, debug=debug)

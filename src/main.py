@@ -47,9 +47,11 @@ def main() -> None:
     edit_parser = subparsers.add_parser("edit", help="clean profanity from an epub")
     edit_parser.add_argument("path", type=_valid_epub_file, help="path to an epub")
     edit_parser.add_argument("-o", "--output", type=_valid_is_epub, default=None, help="output file name")
+    edit_parser.add_argument("-v", "--verbose", action="store_true", help="print details of each replacement")
 
     edit_dir_parser = subparsers.add_parser("edit-dir", help="clean profanity from an extracted epub directory")
     edit_dir_parser.add_argument("path", type=_valid_epub_dir, help="path to an extracted epub directory")
+    edit_dir_parser.add_argument("-v", "--verbose", action="store_true", help="print details of each replacement")
 
     extract_parser = subparsers.add_parser("extract", help="extract an epub into a directory")
     extract_parser.add_argument("path", type=_valid_epub_file, help="path to an epub")
@@ -62,9 +64,9 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "edit":
-        edit_epub(args.path, args.output)
+        edit_epub(args.path, args.output, debug=args.verbose)
     elif args.command == "edit-dir":
-        edit_epub_dir(args.path)
+        edit_epub_dir(args.path, debug=args.verbose)
     elif args.command == "extract":
         print(f"Extracted to '{extract_epub(args.path, args.output)}'")
     elif args.command == "make":
