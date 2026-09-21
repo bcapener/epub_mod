@@ -133,7 +133,7 @@ def make_epub(path: Path, output_path: Path|None=None) -> Path:
     return new_path
 
 def iter_lines(file_path: Path):
-    with open(file_path, "r", newline="") as file:
+    with open(file_path, "r", newline="", encoding="utf-8") as file:
         text = file.read()
         for line_no, line in enumerate(text.splitlines(keepends=True), start=1):
             if line.endswith("\r\n"):
@@ -150,7 +150,7 @@ class Cleaner:
 
         all_text = ""
         for file_path in self.html_files:
-            all_text += file_path.read_text()
+            all_text += file_path.read_text(encoding="utf-8")
         self.replacement_list = cleaner.language_check(all_text)
 
     def clean_line(self, line: str):
@@ -190,7 +190,7 @@ def edit_epub_dir(epub_dir: Path, debug: bool=False):
         print(f"Cleaned:   '{file_path}'")
 
         output = "".join(line + line_end for _, _, line, line_end, _ in lines)
-        with open(file_path, "w", newline="") as file:
+        with open(file_path, "w", newline="", encoding="utf-8") as file:
             file.write(output)
 
 
