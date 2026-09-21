@@ -1,11 +1,24 @@
 import argparse
+import os
 from pathlib import Path
 
 from epub_mod import edit_epub, edit_epub_dir, extract_epub, make_epub
 
 
+def _clean_path_arg(path_str: str) -> str:
+    """Strip the stray quote PowerShell appends to Windows paths ending in a backslash.
+
+    A double quote is never a valid character in a Windows path, so a trailing
+    quote on Windows is always an artifact and safe to remove. On other
+    platforms a quote may be a legitimate part of a filename and is preserved.
+    """
+    if os.name == "nt" and len(path_str) > 1 and path_str.endswith('"'):
+        return path_str[:-1]
+    return path_str
+
+
 def _valid_epub_file(path_str) -> Path:
-    path = Path(path_str).resolve()
+    path = Path(_clean_path_arg(path_str)).resolve()
 
     if not path.exists():
         raise argparse.ArgumentTypeError(f"Invalid path: {path_str}")
@@ -14,7 +27,7 @@ def _valid_epub_file(path_str) -> Path:
 
 
 def _valid_is_epub(path_str: str|Path) -> Path:
-    path = Path(path_str).resolve()
+    path = Path(_clean_path_arg(str(path_str))).resolve()
 
     if path.suffix.lower() != ".epub":
         raise argparse.ArgumentTypeError(f"File must have an 'epub' extension. '{path_str}'")
@@ -23,7 +36,7 @@ def _valid_is_epub(path_str: str|Path) -> Path:
 
 
 def _valid_dir(path_str) -> Path:
-    path = Path(path_str).resolve()
+    path = Path(_clean_path_arg(path_str)).resolve()
 
     if not path.is_dir():
         raise argparse.ArgumentTypeError(f"Invalid directory: {path_str}")
