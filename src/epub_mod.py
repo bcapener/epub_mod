@@ -1,7 +1,9 @@
 import base64
 import contextlib
+import difflib
 import json
 import os
+import re
 import sys
 import tempfile
 import zipfile
@@ -166,6 +168,59 @@ class Cleaner:
             curr_line = str(line)
         return line, modifiers
 
+def _token_spans(line: str) -> list[tuple[int, int, str]]:
+    """Return (start, end, text) tuples for each word or punctuation token in ``line``.
+
+    Punctuation that ends a word (`,`, `.`, `"`, and other non-word, non-space
+    characters) is split out into its own single-character token.
+    """
+    return [(m.start(), m.end(), m.group()) for m in re.finditer(r"\w+|[^\w\s]", line)]
+
+
+def _mark_added_removed(original: str, new: str) -> str:
+    """Mark words added to or removed from ``original`` to form ``new``.
+
+    Changed words are wrapped in square brackets: removed words are shown
+    as ``[]`` and added words as ``[added]``.
+    """
+    if original == new:
+        return new
+    original_tokens = _token_spans(original)
+    new_tokens = _token_spans(new)
+    matcher = difflib.SequenceMatcher(
+        None,
+        [t[2] for t in original_tokens],
+        [t[2] for t in new_tokens],
+        autojunk=False,
+    )
+
+    parts = []
+    consumed = 0
+    for op, i1, i2, j1, j2 in matcher.get_opcodes():
+        if op == "equal":
+            end = new_tokens[j2 - 1][1]
+            parts.append(new[consumed:end])
+            consumed = end
+        elif op == "replace":
+            start = new_tokens[j1][0]
+            parts.append(new[consumed:start])
+            # parts.append("[]")
+            parts.append("[" + " ".join(t[2] for t in new_tokens[j1:j2]) + "]")
+            consumed = new_tokens[j2 - 1][1]
+        elif op == "insert":
+            start = new_tokens[j1][0]
+            parts.append(new[consumed:start])
+            parts.append("[" + " ".join(t[2] for t in new_tokens[j1:j2]) + "]")
+            consumed = new_tokens[j2 - 1][1]
+        elif op == "delete":
+            parts.append("[]")
+    parts.append(new[consumed:])
+    return "".join(parts)
+
+
+def _create_output(lines: list[tuple[int, str, str, str, list[tuple[str, str]]]]):
+    return "".join(_mark_added_removed(original, line) + line_end
+                   for _, original, line, line_end, _ in lines)
 
 def edit_epub_dir(epub_dir: Path, debug: bool=False):
     c = Cleaner(epub_dir)
@@ -189,7 +244,7 @@ def edit_epub_dir(epub_dir: Path, debug: bool=False):
             continue
         print(f"Cleaned:   '{file_path}'")
 
-        output = "".join(line + line_end for _, _, line, line_end, _ in lines)
+        output = _create_output(lines)
         with open(file_path, "w", newline="", encoding="utf-8") as file:
             file.write(output)
 
